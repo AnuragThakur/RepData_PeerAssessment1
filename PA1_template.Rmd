@@ -1,36 +1,74 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
-
+#Reproducible research Peer Assesment 1 by Anurag
+=====================================================
 
 ## Loading and preprocessing the data
 To answer questions asked in this excercise we will first read the file and extract dates and corresponding steps.
-```{r}
-filepath<-".\\repdata_data_activity\\activity.csv"
-filedata<-read.csv(filepath,header=TRUE)
-dateandsteps<-filedata[,1:2]
+```{r results='hide'}
+filepath<-"C:\\ANURAG B\\Work\\Analytics\\Coursera\\repdata_data_activity\\activity.csv"
+origfiledata<-read.csv(filepath,header=TRUE)
+format(origfiledata$date<-as.Date(origfiledata$date, "%Y-%m-%d"))
 ```
 
 ## What is mean total number of steps taken per day?
 We will use function aggregate to aggregate the data by date and then we will use function mean to calculate the mean.
 ```{r}
-dateandsteps<-transform(dateandsteps, date=as.factor(date))
-tidydateandsteps<-with(dateandsteps,aggregate(dateandsteps,by=list(date),FUN="sum"))
-meansteps<-mean(tidydateandsteps[,2],na.rm=TRUE)
-meansteps
+filedata<-transform(origfiledata, date=as.factor(date))
+tidyfiledata<-with(filedata,aggregate(steps,by=list(date),FUN="sum", na.rm=T))
+colnames(tidyfiledata)<-c("date","steps")
+hist(tidyfiledata$steps)
+mean(tidyfiledata$steps)
+median(tidyfiledata$steps)
 ```
 
 ## What is the average daily activity pattern?
 We will plot the steps vs date to look at the pattern
 ```{r}
-with(tidydateandsteps,plot(Group.1,steps,xlab= "Date",ylab="Steps",main="Pattern"))
-with(tidydateandsteps,lines(Group.1,steps,col="green"))
+tidyfiledata.mean<-with(filedata,aggregate(steps,by=list(interval),FUN="mean", na.rm=T))
+colnames(tidyfiledata.mean)<-c("interval","avg.steps")
+with(tidyfiledata.mean,plot(interval,avg.steps,xlab= "interval",ylab="Average Steps",main="Pattern"))
+with(tidyfiledata.mean,lines(interval,avg.steps,col="green"))
 ```
 Looking at the graph we can say that average daily pattern keeps fulctuating.
 
-## Imputing missing values
+```{r}
+tidyfiledata.mean$interval[which.max(tidyfiledata.mean$avg.steps)] 
+```
 
+## Imputing missing values
+1. Calculate total no. of NAs in steps
+
+```{r}
+length(which(is.na(filedata$steps)))
+```
+
+2 & 3. Fill NAs 
+
+```{r}
+newd<-filedata
+newd$steps[is.na(newd$steps)]<- mean(filedata$steps, na.rm=T)
+
+```
+4.  New Mean and median with filled data 
+
+```{r}
+tidynewd<-with(newd,aggregate(steps,by=list(date),FUN="sum", na.rm=T))
+colnames(tidynewd)<-c("date","steps")
+hist(tidynewd$steps)
+mean(tidynewd$steps)
+median(tidynewd$steps)
+```
+Slight increase in Mean and median
 ## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+origfiledata$day[weekdays(origfiledata$date) %in% c("Saturday","Sunday")] <- "weekend"
+origfiledata$day[!weekdays(origfiledata$date) %in% c("Saturday","Sunday")] <- "weekday"
+origfiledata<-transform(origfiledata, day=as.factor(day))
+
+stepsmean<-with(origfiledata,aggregate(steps,by=list(interval,day),FUN="mean", na.rm=T))
+colnames(stepsmean) <-c("interval","day","mean")
+library(ggplot2)
+ggplot(stepsmean, aes(x=interval, y=mean)) + geom_line() + facet_wrap(~ day, ncol=1)
+
+```
+
+
